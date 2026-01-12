@@ -159,7 +159,6 @@
       line-height:1.45;
     }
     .cardBody{padding:14px 16px 16px;}
-    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
     .field{margin-top:10px;}
     .label{
       display:flex;
@@ -170,7 +169,7 @@
       margin-bottom:7px;
     }
 
-    /* --- Select styling (keep “nice” look: arrow, focus, dark options) --- */
+    /* --- Select styling (arrow, focus, dark options) --- */
     .selectWrap{
       position:relative;
       width:100%;
@@ -284,29 +283,10 @@
       transform: rotate(20deg);
       pointer-events:none;
     }
-    .paywallCard h3{
-      margin:0 0 6px;
-      font-size:16px;
-      letter-spacing:.02em;
-    }
-    .paywallCard p{
-      margin:0;
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.55;
-    }
-    .paywallRow{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top:14px;
-    }
-    .small{
-      font-size:12px;
-      color:var(--muted);
-      margin-top:10px;
-      line-height:1.5;
-    }
+    .paywallCard h3{ margin:0 0 6px; font-size:16px; letter-spacing:.02em; }
+    .paywallCard p{ margin:0; color:var(--muted); font-size:13px; line-height:1.55; }
+    .paywallRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+    .small{ font-size:12px; color:var(--muted); margin-top:10px; line-height:1.5; }
 
     footer{
       margin-top:18px;
@@ -337,6 +317,50 @@
       border-bottom:1px dashed rgba(255,255,255,.18);
     }
     .footerLinks a:hover{color:var(--text)}
+
+    /* -----------------------------
+       Cookie Consent (minimal)
+       ----------------------------- */
+    .cookieBar{
+      position:fixed;
+      left:0; right:0; bottom:0;
+      display:none;
+      z-index:9998;
+      padding:14px 14px 16px;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      border-top:1px solid rgba(255,255,255,.10);
+    }
+    .cookieInner{
+      max-width:1100px;
+      margin:0 auto;
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+    .cookieText{
+      min-width:min(620px, 100%);
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.55;
+    }
+    .cookieText b{color:var(--text)}
+    .cookieActions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .cookieLink{
+      color:var(--muted);
+      text-decoration:none;
+      border-bottom:1px dashed rgba(255,255,255,.18);
+      font-size:12px;
+    }
+    .cookieLink:hover{color:var(--text)}
   </style>
 </head>
 
@@ -371,441 +395,3 @@
         <div class="cardBody">
           <div class="field">
             <div class="label">
-              <span id="hToneLabel">Tone</span>
-            </div>
-            <div class="selectWrap">
-              <select id="hTone">
-                <option value="neutral">Neutral</option>
-                <option value="friendly">Friendly</option>
-                <option value="formal">Formal</option>
-                <option value="confident">Confident</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field">
-            <div class="label">
-              <span id="hInputLabel">Input</span>
-            </div>
-            <textarea id="hInput" placeholder="Paste your text here..."></textarea>
-          </div>
-
-          <div class="actions">
-            <button class="btn primary" id="hGen" type="button">Generate</button>
-            <button class="btn" id="hCopy" type="button">Copy</button>
-            <button class="btn" id="hSave" type="button">Save .txt</button>
-          </div>
-
-          <div class="out" id="hOut"></div>
-          <div class="hint" id="hHint">Tip: keep the main idea, but vary sentence structure and add natural transitions.</div>
-        </div>
-      </section>
-
-      <!-- Cover Letter -->
-      <section class="card">
-        <div class="cardHeader">
-          <h2 id="cTitle">Cover Letter</h2>
-          <p id="cDesc">Generate a tailored cover letter from a short brief.</p>
-        </div>
-        <div class="cardBody">
-          <div class="field">
-            <div class="label">
-              <span id="cStyleLabel">Style</span>
-            </div>
-            <div class="selectWrap">
-              <select id="cStyle">
-                <option value="concise">Concise</option>
-                <option value="standard">Standard</option>
-                <option value="detailed">Detailed</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field">
-            <div class="label">
-              <span id="cInputLabel">Brief</span>
-            </div>
-            <textarea id="cInput" placeholder="Role, company, experience, key achievements, skills, tone..."></textarea>
-          </div>
-
-          <div class="actions">
-            <button class="btn primary" id="cGen" type="button">Generate</button>
-            <button class="btn" id="cCopy" type="button">Copy</button>
-            <button class="btn" id="cSave" type="button">Save .txt</button>
-          </div>
-
-          <div class="out" id="cOut"></div>
-          <div class="hint" id="cHint">Tip: include 2–3 achievements with numbers (%, $, time saved, users, etc.).</div>
-        </div>
-      </section>
-
-      <!-- Social Post -->
-      <section class="card">
-        <div class="cardHeader">
-          <h2 id="sTitle">Social Post</h2>
-          <p id="sDesc">Write a clean post for Twitter/X, LinkedIn, or Instagram.</p>
-        </div>
-        <div class="cardBody">
-          <div class="field">
-            <div class="label">
-              <span id="sPlatformLabel">Platform</span>
-            </div>
-            <div class="selectWrap">
-              <select id="sPlatform">
-                <option value="linkedin">LinkedIn</option>
-                <option value="x">Twitter / X</option>
-                <option value="instagram">Instagram</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field">
-            <div class="label">
-              <span id="sInputLabel">Topic</span>
-            </div>
-            <textarea id="sInput" placeholder="What do you want to post about? Add key points, CTA, hashtags..."></textarea>
-          </div>
-
-          <div class="actions">
-            <button class="btn primary" id="sGen" type="button">Generate</button>
-            <button class="btn" id="sCopy" type="button">Copy</button>
-            <button class="btn" id="sSave" type="button">Save .txt</button>
-          </div>
-
-          <div class="out" id="sOut"></div>
-          <div class="hint" id="sHint">Tip: one strong hook + 3 bullets + CTA works best on most platforms.</div>
-        </div>
-      </section>
-
-    </div>
-
-    <footer>
-      <div class="footerLeft">
-        <div>© <span id="year"></span> <b>VIREX</b>. <span id="rights">All rights reserved.</span></div>
-      </div>
-
-      <div class="footerLinks">
-        <a href="/privacy.html" id="privacyLink">Privacy Policy</a>
-        <a href="/terms.html" id="termsLink">Terms of Service</a>
-
-        <div class="selectWrap" style="width:160px;">
-          <select id="langSelect" aria-label="Language">
-            <option value="en">English</option>
-            <option value="ru">Русский</option>
-          </select>
-        </div>
-      </div>
-    </footer>
-  </div>
-
-  <!-- Paywall -->
-  <div class="paywall" id="paywall">
-    <div class="paywallCard" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
-      <h3 id="pwTitle">Upgrade to continue</h3>
-      <p id="pwText">
-        You’ve used your <b>2 free generations</b>. Upgrade to unlock unlimited generations and future features.
-      </p>
-
-      <div class="paywallRow">
-        <button class="btn primary" id="pwUpgrade" type="button">Upgrade</button>
-        <button class="btn" id="pwClose" type="button">Close</button>
-      </div>
-
-      <div class="small" id="pwSmall">
-        Note: Payments/subscriptions will be added next (email + Google login, promo codes, subscriptions).
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // -----------------------------
-    // VIREX — UI i18n (UI only)
-    // -----------------------------
-    const I18N = {
-      en: {
-        tagline: "AI Writing Toolkit",
-        freeLabel: "Free left",
-        resetFree: "Reset free counter",
-
-        hTitle: "Humanize",
-        hDesc: "Make AI-like text feel more natural and human.",
-        hToneLabel: "Tone",
-        hInputLabel: "Input",
-        hGen: "Generate",
-        hCopy: "Copy",
-        hSave: "Save .txt",
-        hHint: "Tip: keep the main idea, but vary sentence structure and add natural transitions.",
-
-        cTitle: "Cover Letter",
-        cDesc: "Generate a tailored cover letter from a short brief.",
-        cStyleLabel: "Style",
-        cInputLabel: "Brief",
-        cGen: "Generate",
-        cCopy: "Copy",
-        cSave: "Save .txt",
-        cHint: "Tip: include 2–3 achievements with numbers (%, $, time saved, users, etc.).",
-
-        sTitle: "Social Post",
-        sDesc: "Write a clean post for Twitter/X, LinkedIn, or Instagram.",
-        sPlatformLabel: "Platform",
-        sInputLabel: "Topic",
-        sGen: "Generate",
-        sCopy: "Copy",
-        sSave: "Save .txt",
-        sHint: "Tip: one strong hook + 3 bullets + CTA works best on most platforms.",
-
-        rights: "All rights reserved.",
-        privacy: "Privacy Policy",
-        terms: "Terms of Service",
-
-        pwTitle: "Upgrade to continue",
-        pwText: "You’ve used your 2 free generations. Upgrade to unlock unlimited generations and future features.",
-        pwUpgrade: "Upgrade",
-        pwClose: "Close",
-        pwSmall: "Note: Payments/subscriptions will be added next (email + Google login, promo codes, subscriptions)."
-      },
-
-      ru: {
-        tagline: "AI инструменты для текста",
-        freeLabel: "Бесплатно осталось",
-        resetFree: "Сбросить счётчик",
-
-        hTitle: "Humanize",
-        hDesc: "Сделайте текст более естественным и «человечным».",
-        hToneLabel: "Тон",
-        hInputLabel: "Ввод",
-        hGen: "Сгенерировать",
-        hCopy: "Копировать",
-        hSave: "Скачать .txt",
-        hHint: "Совет: сохраните смысл, но меняйте структуру предложений и добавляйте естественные связки.",
-
-        cTitle: "Cover Letter",
-        cDesc: "Сгенерируйте сопроводительное письмо по короткому описанию.",
-        cStyleLabel: "Стиль",
-        cInputLabel: "Описание",
-        cGen: "Сгенерировать",
-        cCopy: "Копировать",
-        cSave: "Скачать .txt",
-        cHint: "Совет: добавьте 2–3 достижения с цифрами (%, $, время, пользователи и т.д.).",
-
-        sTitle: "Social Post",
-        sDesc: "Пост для LinkedIn, Twitter/X или Instagram.",
-        sPlatformLabel: "Платформа",
-        sInputLabel: "Тема",
-        sGen: "Сгенерировать",
-        sCopy: "Копировать",
-        sSave: "Скачать .txt",
-        sHint: "Совет: сильный хук + 3 пункта + CTA обычно работают лучше всего.",
-
-        rights: "Все права защищены.",
-        privacy: "Политика конфиденциальности",
-        terms: "Условия использования",
-
-        pwTitle: "Нужен апгрейд",
-        pwText: "Вы использовали 2 бесплатные генерации. Оформите доступ, чтобы снять лимиты и открыть будущие функции.",
-        pwUpgrade: "Апгрейд",
-        pwClose: "Закрыть",
-        pwSmall: "Примечание: оплата/подписки будут добавлены следующими (логин email + Google, промокоды, подписки)."
-      }
-    };
-
-    // -----------------------------
-    // Free counter + paywall
-    // -----------------------------
-    const MAX_FREE = 2;
-    const LS_FREE = "virex_free_left";
-    const LS_LANG = "virex_lang";
-
-    const $ = (id) => document.getElementById(id);
-
-    function getFreeLeft(){
-      const raw = localStorage.getItem(LS_FREE);
-      const n = raw === null ? MAX_FREE : parseInt(raw, 10);
-      return Number.isFinite(n) ? Math.max(0, n) : MAX_FREE;
-    }
-    function setFreeLeft(n){
-      localStorage.setItem(LS_FREE, String(Math.max(0, n)));
-      $("freeLeft").textContent = String(getFreeLeft());
-    }
-
-    function showPaywall(){
-      $("paywall").style.display = "flex";
-    }
-    function hidePaywall(){
-      $("paywall").style.display = "none";
-    }
-
-    function consumeFreeOrPaywall(){
-      const left = getFreeLeft();
-      if(left <= 0){
-        showPaywall();
-        return false;
-      }
-      setFreeLeft(left - 1);
-      return true;
-    }
-
-    // -----------------------------
-    // Copy / Save
-    // -----------------------------
-    async function copyText(text){
-      try{
-        await navigator.clipboard.writeText(text);
-      }catch(e){
-        // fallback
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        ta.remove();
-      }
-    }
-
-    function saveTxt(filename, content){
-      const blob = new Blob([content], {type:"text/plain;charset=utf-8"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(a.href);
-    }
-
-    // -----------------------------
-    // Simple placeholder generators (front-only demo)
-    // (You can later replace with real API calls)
-    // -----------------------------
-    function genHumanize(input, tone){
-      if(!input.trim()) return "";
-      const prefix = tone === "formal" ? "Refined version:\n"
-                  : tone === "friendly" ? "Friendly version:\n"
-                  : tone === "confident" ? "Confident version:\n"
-                  : "Humanized version:\n";
-      return prefix + input.trim();
-    }
-
-    function genCoverLetter(brief, style){
-      if(!brief.trim()) return "";
-      const head = style === "concise" ? "Cover Letter (Concise)\n"
-                 : style === "detailed" ? "Cover Letter (Detailed)\n"
-                 : "Cover Letter\n";
-      return head + "—\n" + brief.trim();
-    }
-
-    function genSocial(topic, platform){
-      if(!topic.trim()) return "";
-      const head = platform === "linkedin" ? "LinkedIn Post\n"
-                 : platform === "instagram" ? "Instagram Caption\n"
-                 : "Twitter/X Post\n";
-      return head + "—\n" + topic.trim();
-    }
-
-    // -----------------------------
-    // i18n apply
-    // -----------------------------
-    function applyLang(lang){
-      const t = I18N[lang] || I18N.en;
-
-      $("tagline").textContent = t.tagline;
-      $("freeLabel").textContent = t.freeLabel;
-      $("resetFreeBtn").textContent = t.resetFree;
-
-      $("hTitle").textContent = t.hTitle;
-      $("hDesc").textContent = t.hDesc;
-      $("hToneLabel").textContent = t.hToneLabel;
-      $("hInputLabel").textContent = t.hInputLabel;
-      $("hGen").textContent = t.hGen;
-      $("hCopy").textContent = t.hCopy;
-      $("hSave").textContent = t.hSave;
-      $("hHint").textContent = t.hHint;
-
-      $("cTitle").textContent = t.cTitle;
-      $("cDesc").textContent = t.cDesc;
-      $("cStyleLabel").textContent = t.cStyleLabel;
-      $("cInputLabel").textContent = t.cInputLabel;
-      $("cGen").textContent = t.cGen;
-      $("cCopy").textContent = t.cCopy;
-      $("cSave").textContent = t.cSave;
-      $("cHint").textContent = t.cHint;
-
-      $("sTitle").textContent = t.sTitle;
-      $("sDesc").textContent = t.sDesc;
-      $("sPlatformLabel").textContent = t.sPlatformLabel;
-      $("sInputLabel").textContent = t.sInputLabel;
-      $("sGen").textContent = t.sGen;
-      $("sCopy").textContent = t.sCopy;
-      $("sSave").textContent = t.sSave;
-      $("sHint").textContent = t.sHint;
-
-      $("rights").textContent = t.rights;
-      $("privacyLink").textContent = t.privacy;
-      $("termsLink").textContent = t.terms;
-
-      $("pwTitle").textContent = t.pwTitle;
-      $("pwText").textContent = t.pwText;
-      $("pwUpgrade").textContent = t.pwUpgrade;
-      $("pwClose").textContent = t.pwClose;
-      $("pwSmall").textContent = t.pwSmall;
-
-      localStorage.setItem(LS_LANG, lang);
-    }
-
-    // -----------------------------
-    // Init
-    // -----------------------------
-    (function init(){
-      $("year").textContent = String(new Date().getFullYear());
-
-      // Free counter init
-      $("freeLeft").textContent = String(getFreeLeft());
-
-      // Language init
-      const savedLang = localStorage.getItem(LS_LANG) || "en";
-      $("langSelect").value = savedLang;
-      applyLang(savedLang);
-
-      $("langSelect").addEventListener("change", (e)=> applyLang(e.target.value));
-
-      $("resetFreeBtn").addEventListener("click", ()=>{
-        setFreeLeft(MAX_FREE);
-        hidePaywall();
-      });
-
-      $("pwClose").addEventListener("click", hidePaywall);
-      $("paywall").addEventListener("click", (e)=>{
-        if(e.target === $("paywall")) hidePaywall();
-      });
-      $("pwUpgrade").addEventListener("click", ()=>{
-        // Placeholder (future payments/subscriptions)
-        alert("Upgrade flow will be added next.");
-      });
-
-      // Humanize
-      $("hGen").addEventListener("click", ()=>{
-        if(!consumeFreeOrPaywall()) return;
-        $("hOut").textContent = genHumanize($("hInput").value, $("hTone").value);
-      });
-      $("hCopy").addEventListener("click", ()=> copyText($("hOut").textContent || ""));
-      $("hSave").addEventListener("click", ()=> saveTxt("virex-humanize.txt", $("hOut").textContent || ""));
-
-      // Cover letter
-      $("cGen").addEventListener("click", ()=>{
-        if(!consumeFreeOrPaywall()) return;
-        $("cOut").textContent = genCoverLetter($("cInput").value, $("cStyle").value);
-      });
-      $("cCopy").addEventListener("click", ()=> copyText($("cOut").textContent || ""));
-      $("cSave").addEventListener("click", ()=> saveTxt("virex-cover-letter.txt", $("cOut").textContent || ""));
-
-      // Social post
-      $("sGen").addEventListener("click", ()=>{
-        if(!consumeFreeOrPaywall()) return;
-        $("sOut").textContent = genSocial($("sInput").value, $("sPlatform").value);
-      });
-      $("sCopy").addEventListener("click", ()=> copyText($("sOut").textContent || ""));
-      $("sSave").addEventListener("click", ()=> saveTxt("virex-social-post.txt", $("sOut").textContent || ""));
-    })();
-  </script>
-</body>
-</html>
