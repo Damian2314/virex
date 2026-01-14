@@ -51,7 +51,7 @@
     .brand h1{margin:0;font-size:18px;letter-spacing:.18em;text-transform:uppercase;line-height:1.15;}
     .brand small{display:block;margin-top:3px;font-size:12px;color:var(--muted);letter-spacing:.02em;}
 
-    .topRight{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end; position:relative; z-index:6;}
+    .topRight{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end; position:relative; z-index:5;}
     .pill{
       display:flex;align-items:center;gap:10px;
       background:rgba(255,255,255,.04);
@@ -75,7 +75,6 @@
       display:inline-flex;
       align-items:center;
       gap:8px;
-      pointer-events:auto;
     }
     .btn:hover{border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.06)}
     .btn:active{transform: translateY(1px)}
@@ -262,7 +261,7 @@
       </div>
 
       <div class="topRight">
-        <div class="pill" id="freePill" title="Free generations left (per account)" style="display:none;">
+        <div class="pill" title="Free generations left (per account)">
           <b id="freeLabel">Free left</b>
           <span><span id="freeLeft">—</span></span>
         </div>
@@ -389,6 +388,7 @@
             <option value="ru">Русский</option>
           </select>
         </div>
+
       </div>
     </footer>
   </div>
@@ -458,7 +458,7 @@
     const SUPABASE_URL = "https://yrcgqbgomzqtrssdyewd.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Uw04cxElgXksa7K-bUr4SA_sa85Z44C";
 
-    // Create client once
+    // NEVER redeclare "supabase" elsewhere in this file.
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const I18N = {
@@ -514,54 +514,6 @@
     // Auth modal
     function openAuth(){ setStatus("", ""); const m = $("authModal"); if(m) m.style.display = "flex"; }
     function closeAuth(){ const m = $("authModal"); if(m) m.style.display = "none"; }
-
-    // --- IMPORTANT: handle redirect after magic link (hash or code) ---
-    function parseFragmentParams(hash){
-      const out = {};
-      const h = (hash || "").replace(/^#/, "");
-      if(!h) return out;
-      for(const part of h.split("&")){
-        const [k, v] = part.split("=");
-        if(!k) continue;
-        out[decodeURIComponent(k)] = decodeURIComponent(v || "");
-      }
-      return out;
-    }
-
-    async function handleAuthRedirectIfPresent(){
-      try{
-        const url = new URL(window.location.href);
-        const code = url.searchParams.get("code");
-
-        // Case 1: PKCE code in query
-        if(code){
-          const { error } = await sb.auth.exchangeCodeForSession(code);
-          if(error) console.error("exchangeCodeForSession error:", error);
-
-          url.searchParams.delete("code");
-          url.searchParams.delete("error");
-          url.searchParams.delete("error_description");
-          window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : "") + url.hash);
-          return;
-        }
-
-        // Case 2: tokens in hash
-        const frag = parseFragmentParams(window.location.hash);
-        if(frag.access_token && frag.refresh_token){
-          const { error } = await sb.auth.setSession({
-            access_token: frag.access_token,
-            refresh_token: frag.refresh_token
-          });
-          if(error) console.error("setSession error:", error);
-
-          // clean hash
-          window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-          return;
-        }
-      }catch(e){
-        console.error("handleAuthRedirectIfPresent failed:", e);
-      }
-    }
 
     // Profiles (free attempts per account)
     async function ensureProfile(user){
@@ -686,8 +638,8 @@
 
       const { error } = await sb.auth.signInWithOtp({
         email,
-        // IMPORTANT: redirect to site root (matches your link redirect_to=https://virexai.vercel.app/)
-        options: { emailRedirectTo: window.location.origin + "/" }
+        // IMPORTANT: no trailing slash (matches allowlist more reliably)
+        options: { emailRedirectTo: window.location.origin }
       });
 
       if(error){ console.error(error); setStatus(error.message || "Failed to send email.", "err"); return; }
@@ -695,28 +647,13 @@
     }
 
     async function signOut(){
+      // IMPORTANT: prevent any default / bubbling issues
       try{
-        const btn = $("signOutBtn");
-        if(btn){
-          btn.disabled = true;
-          btn.textContent = "Signing out…";
-        }
-
         await sb.auth.signOut();
-
       }catch(e){
-        console.error("signOut failed:", e);
-      }finally{
-        // restore button label in current language
-        const lang = localStorage.getItem(LS_LANG) || "en";
-        const t = I18N[lang] || I18N.en;
-        const btn = $("signOutBtn");
-        if(btn){
-          btn.disabled = false;
-          btn.textContent = t.signOut;
-        }
-        await refreshTopBar();
+        console.error(e);
       }
+      await refreshTopBar();
     }
 
     async function refreshTopBar(){
@@ -738,36 +675,19 @@
       if($("cookieAccept")) $("cookieAccept").textContent = t.cookieAccept;
       if($("cookieDecline")) $("cookieDecline").textContent = t.cookieDecline;
 
-      // NOT logged in
       if(!user){
         if($("freeLeft")) $("freeLeft").textContent = "—";
-        if($("freePill")) $("freePill").style.display = "none";
         if($("authBtn")) $("authBtn").style.display = "inline-flex";
         if($("signOutBtn")) $("signOutBtn").style.display = "none";
         return;
       }
 
-      // logged in
       if($("authBtn")) $("authBtn").style.display = "none";
       if($("signOutBtn")) $("signOutBtn").style.display = "inline-flex";
 
       await ensureProfile(user);
       const left = await getFreeLeft(user);
-
-      if(left === null){
-        if($("freePill")) $("freePill").style.display = "none";
-        if($("freeLeft")) $("freeLeft").textContent = "—";
-        return;
-      }
-
-      // show only if left > 0 (as you asked)
-      if(left > 0){
-        if($("freePill")) $("freePill").style.display = "flex";
-        if($("freeLeft")) $("freeLeft").textContent = String(left);
-      }else{
-        if($("freePill")) $("freePill").style.display = "none";
-        if($("freeLeft")) $("freeLeft").textContent = "0";
-      }
+      if($("freeLeft")) $("freeLeft").textContent = (left === null ? "—" : String(left));
     }
 
     (function init(){
@@ -795,21 +715,22 @@
       if(pw) pw.addEventListener("click", (e)=> { if(e.target === pw) hidePaywall(); });
 
       // auth
-      on("authBtn","click", openAuth);
-      on("authClose","click", closeAuth);
+      on("authBtn","click", (e)=> { e.preventDefault(); e.stopPropagation(); openAuth(); });
+      on("authClose","click", (e)=> { e.preventDefault(); e.stopPropagation(); closeAuth(); });
       const modal = $("authModal");
       if(modal) modal.addEventListener("click", (e)=> { if(e.target === modal) closeAuth(); });
-      on("emailBtn","click", ()=> sendMagicLink(($("emailInput")?.value || "").trim()));
 
-      // SIGN OUT (extra reliable click handler)
-      on("signOutBtn","click", (e)=>{ e.preventDefault(); e.stopPropagation(); signOut(); });
-      document.addEventListener("click", (e)=>{
-        const b = e.target && e.target.closest ? e.target.closest("#signOutBtn") : null;
-        if(b){
-          e.preventDefault(); e.stopPropagation();
-          signOut();
-        }
-      }, true);
+      on("emailBtn","click", (e)=> {
+        e.preventDefault(); e.stopPropagation();
+        sendMagicLink(($("emailInput")?.value || "").trim());
+      });
+
+      // IMPORTANT: make sure sign out always triggers
+      on("signOutBtn","click", (e)=> {
+        e.preventDefault();
+        e.stopPropagation();
+        signOut();
+      });
 
       // auth state changes
       sb.auth.onAuthStateChange(async (_event, session) => {
@@ -817,11 +738,7 @@
         await refreshTopBar();
       });
 
-      // IMPORTANT: handle redirect session first, then refresh UI
-      (async ()=>{
-        await handleAuthRedirectIfPresent();
-        await refreshTopBar();
-      })();
+      refreshTopBar();
 
       // Tool buttons
       on("hGen","click", async ()=>{ if(!await consumeAttemptOrPaywall()) return; $("hOut").textContent = genHumanize($("hInput").value, $("hTone").value); });
