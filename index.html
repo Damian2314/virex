@@ -37,7 +37,7 @@
         var(--bg);
     }
     a{color:inherit}
-    .wrap{max-width:1100px;margin:0 auto;padding:28px 18px 26px;}
+    .wrap{max-width:1100px;margin:0 auto;padding:28px 18px 26px; position:relative; z-index:1;}
     header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px; position:relative; z-index:5;}
     .brand{display:flex;align-items:center;gap:12px;user-select:none;}
     .logo{
@@ -51,7 +51,7 @@
     .brand h1{margin:0;font-size:18px;letter-spacing:.18em;text-transform:uppercase;line-height:1.15;}
     .brand small{display:block;margin-top:3px;font-size:12px;color:var(--muted);letter-spacing:.02em;}
 
-    .topRight{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end; position:relative; z-index:5;}
+    .topRight{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end; position:relative; z-index:6;}
     .pill{
       display:flex;align-items:center;gap:10px;
       background:rgba(255,255,255,.04);
@@ -75,6 +75,9 @@
       display:inline-flex;
       align-items:center;
       gap:8px;
+      pointer-events:auto;
+      position:relative;
+      z-index:7;
     }
     .btn:hover{border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.06)}
     .btn:active{transform: translateY(1px)}
@@ -261,7 +264,7 @@
       </div>
 
       <div class="topRight">
-        <div class="pill" id="freePill" title="Free generations left (per account)">
+        <div class="pill" id="freePill" title="Free generations left (per account)" style="display:none;">
           <b id="freeLabel">Free left</b>
           <span><span id="freeLeft">—</span></span>
         </div>
@@ -388,7 +391,6 @@
             <option value="ru">Русский</option>
           </select>
         </div>
-
       </div>
     </footer>
   </div>
@@ -458,8 +460,16 @@
     const SUPABASE_URL = "https://yrcgqbgomzqtrssdyewd.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Uw04cxElgXksa7K-bUr4SA_sa85Z44C";
 
-    // NEVER redeclare "supabase" elsewhere in this file.
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Make auth persistence explicit (prevents "logout on refresh")
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage,
+        flowType: "pkce"
+      }
+    });
 
     const I18N = {
       en: {
@@ -514,31 +524,6 @@
     // Auth modal
     function openAuth(){ setStatus("", ""); const m = $("authModal"); if(m) m.style.display = "flex"; }
     function closeAuth(){ const m = $("authModal"); if(m) m.style.display = "none"; }
-
-    // ✅ FIX: correctly exchange PKCE code for session (magic link)
-    async function handleAuthRedirectIfNeeded(){
-      try{
-        const url = new URL(window.location.href);
-        const code = url.searchParams.get("code");
-
-        if(code){
-          const { data, error } = await sb.auth.exchangeCodeForSession(code);
-          if(error) console.error("exchangeCodeForSession error:", error);
-
-          // remove auth params from the URL
-          url.searchParams.delete("code");
-          url.searchParams.delete("type");
-          url.searchParams.delete("redirect_to");
-          window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : "") + url.hash);
-
-          await refreshTopBar();
-          return data?.session || null;
-        }
-      }catch(e){
-        console.error(e);
-      }
-      return null;
-    }
 
     // Profiles (free attempts per account)
     async function ensureProfile(user){
@@ -657,13 +642,37 @@
       return head + "—\n" + topic.trim();
     }
 
+    // IMPORTANT: robust callback handling (prevents "not registered" + fixes session on refresh)
+    async function handleAuthRedirectIfAny(){
+      try{
+        const url = window.location.href;
+        const hasCode = url.includes("?code=") || url.includes("&code=");
+        const hasHashToken = url.includes("#access_token=") || url.includes("type=magiclink");
+
+        if(hasCode){
+          const { error } = await sb.auth.exchangeCodeForSession(url);
+          if(error) console.error("exchangeCodeForSession:", error);
+          // clean URL
+          window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+        } else if(hasHashToken){
+          // supabase-js usually handles hash automatically, but keep URL clean anyway
+          // after a short tick so it can parse the hash
+          setTimeout(()=>{
+            window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+          }, 50);
+        }
+      } catch(e){
+        console.error(e);
+      }
+    }
+
     async function sendMagicLink(email){
       setStatus("Sending magic link…", "");
       if(!email || !email.includes("@")){ setStatus("Enter a valid email.", "err"); return; }
 
       const { error } = await sb.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: window.location.origin + "/index.html" }
+        options: { emailRedirectTo: window.location.origin } // safest for Vercel
       });
 
       if(error){ console.error(error); setStatus(error.message || "Failed to send email.", "err"); return; }
@@ -674,8 +683,15 @@
       try{
         const { error } = await sb.auth.signOut();
         if(error) console.error("signOut error:", error);
-      }finally{
+
+        // Force UI refresh + guarantee session cleared
         await refreshTopBar();
+
+        // If browser still shows old UI due to any caching/timing, reload once:
+        setTimeout(()=> window.location.reload(), 50);
+      } catch(e){
+        console.error(e);
+        window.location.reload();
       }
     }
 
@@ -698,22 +714,30 @@
       if($("cookieAccept")) $("cookieAccept").textContent = t.cookieAccept;
       if($("cookieDecline")) $("cookieDecline").textContent = t.cookieDecline;
 
-      // ✅ show free pill only when logged in
-      if($("freePill")) $("freePill").style.display = user ? "flex" : "none";
-
+      // Not logged in => hide pill + show Sign in
       if(!user){
         if($("freeLeft")) $("freeLeft").textContent = "—";
+        if($("freePill")) $("freePill").style.display = "none";
         if($("authBtn")) $("authBtn").style.display = "inline-flex";
         if($("signOutBtn")) $("signOutBtn").style.display = "none";
         return;
       }
 
+      // Logged in => show Sign out
       if($("authBtn")) $("authBtn").style.display = "none";
       if($("signOutBtn")) $("signOutBtn").style.display = "inline-flex";
 
       await ensureProfile(user);
       const left = await getFreeLeft(user);
-      if($("freeLeft")) $("freeLeft").textContent = (left === null ? "—" : String(left));
+
+      // show pill only if left > 0 (and logged in)
+      if(left !== null && left > 0){
+        if($("freeLeft")) $("freeLeft").textContent = String(left);
+        if($("freePill")) $("freePill").style.display = "inline-flex";
+      } else {
+        if($("freeLeft")) $("freeLeft").textContent = String(left ?? "—");
+        if($("freePill")) $("freePill").style.display = "none";
+      }
     }
 
     (function init(){
@@ -747,17 +771,8 @@
       if(modal) modal.addEventListener("click", (e)=> { if(e.target === modal) closeAuth(); });
       on("emailBtn","click", ()=> sendMagicLink(($("emailInput")?.value || "").trim()));
 
-      // ✅ make sign out always clickable + prevent any overlay issues
-      const so = $("signOutBtn");
-      if(so){
-        so.addEventListener("click", async (e)=>{
-          e.preventDefault();
-          e.stopPropagation();
-          so.disabled = true;
-          await signOut();
-          so.disabled = false;
-        }, { passive:false });
-      }
+      // Sign out: make click максимально надежным
+      on("signOutBtn","click", (e)=>{ e.preventDefault(); e.stopPropagation(); signOut(); });
 
       // auth state changes
       sb.auth.onAuthStateChange(async (_event, session) => {
@@ -765,9 +780,9 @@
         await refreshTopBar();
       });
 
-      // ✅ handle magic-link redirect first, then paint UI
+      // handle redirect + then render
       (async ()=>{
-        await handleAuthRedirectIfNeeded();
+        await handleAuthRedirectIfAny();
         await refreshTopBar();
       })();
 
