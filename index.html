@@ -75,6 +75,7 @@
       display:inline-flex;
       align-items:center;
       gap:8px;
+      pointer-events:auto;
     }
     .btn:hover{border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.06)}
     .btn:active{transform: translateY(1px)}
@@ -87,6 +88,7 @@
       border-color:rgba(239,68,68,.45);
       background:rgba(239,68,68,.10);
     }
+    .btn[disabled]{opacity:.6; cursor:not-allowed}
 
     .grid{display:grid;grid-template-columns: 1fr;gap:14px;margin-top:16px;}
     @media(min-width: 960px){ .grid{grid-template-columns: 1fr 1fr 1fr;} }
@@ -105,7 +107,6 @@
     .field{margin-top:10px;}
     .label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:7px;}
 
-    /* Select styling */
     .selectWrap{position:relative;width:100%;}
     select{
       width:100%;
@@ -174,7 +175,6 @@
     .footerLinks a{color:var(--muted);text-decoration:none;border-bottom:1px dashed rgba(255,255,255,.18);}
     .footerLinks a:hover{color:var(--text)}
 
-    /* Paywall */
     .paywall{
       position:fixed;inset:0;display:none;align-items:center;justify-content:center;
       padding:18px;background: rgba(0,0,0,.70);backdrop-filter: blur(10px);z-index:9999;
@@ -192,7 +192,6 @@
     .paywallRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
     .small{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;}
 
-    /* Auth modal */
     .modal{
       position:fixed;inset:0;display:none;align-items:center;justify-content:center;
       padding:18px;background: rgba(0,0,0,.70);backdrop-filter: blur(10px);z-index:10000;
@@ -226,7 +225,6 @@
     .status.ok{color:#9fe3b1}
     .status.err{color:#ffb4b4}
 
-    /* Cookie */
     .cookieBar{
       position:fixed;left:0; right:0; bottom:0;display:none;z-index:9998;
       padding:14px 14px 16px;background: rgba(0,0,0,.55);
@@ -261,7 +259,7 @@
       </div>
 
       <div class="topRight">
-        <div class="pill" title="Free generations left (per account)">
+        <div class="pill" id="freePill" title="Free generations left (per account)">
           <b id="freeLabel">Free left</b>
           <span><span id="freeLeft">—</span></span>
         </div>
@@ -371,53 +369,6 @@
           <div class="hint">Tip: one strong hook + 3 bullets + CTA works best on most platforms.</div>
         </div>
       </section>
-
-      <!-- NEW: Code Check (FREE, local) -->
-      <section class="card">
-        <div class="cardHeader">
-          <h2>Code Check</h2>
-          <p>Free local check: find issues + suggest fixes (best for JS/HTML/CSS).</p>
-        </div>
-        <div class="cardBody">
-          <div class="field">
-            <div class="label"><span>Language</span></div>
-            <div class="selectWrap">
-              <select id="codeLang">
-                <option value="javascript">JavaScript</option>
-                <option value="html">HTML</option>
-                <option value="css">CSS</option>
-                <option value="python">Python (basic)</option>
-                <option value="java">Java (basic)</option>
-                <option value="csharp">C# (basic)</option>
-                <option value="sql">SQL (basic)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field">
-            <div class="label">
-              <span>Code</span>
-              <span style="color:var(--muted); font-size:12px;">You can paste or upload a file</span>
-            </div>
-            <textarea id="codeInput" placeholder="Paste code here..."></textarea>
-          </div>
-
-          <input id="codeFile" type="file" accept=".txt,.js,.ts,.html,.htm,.css,.py,.java,.cs,.sql" style="display:none;" />
-
-          <div class="actions">
-            <button class="btn" id="codeUpload" type="button">Upload file</button>
-            <button class="btn primary" id="codeGen" type="button">Check</button>
-            <button class="btn" id="codeCopy" type="button">Copy</button>
-            <button class="btn" id="codeSave" type="button">Save .txt</button>
-          </div>
-
-          <div class="out" id="codeOut"></div>
-          <div class="hint">
-            Note: This is a free in-browser checker. JS/HTML/CSS syntax checks are the most accurate here.
-          </div>
-        </div>
-      </section>
-      <!-- /NEW -->
     </div>
 
     <footer>
@@ -504,8 +455,14 @@
     const SUPABASE_URL = "https://yrcgqbgomzqtrssdyewd.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Uw04cxElgXksa7K-bUr4SA_sa85Z44C";
 
-    // NEVER redeclare "supabase" elsewhere in this file.
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage,
+      },
+    });
 
     const I18N = {
       en: {
@@ -684,6 +641,7 @@
 
       const { error } = await sb.auth.signInWithOtp({
         email,
+        // важно: редирект на корень сайта
         options: { emailRedirectTo: window.location.origin }
       });
 
@@ -692,8 +650,22 @@
     }
 
     async function signOut(){
-      try{ await sb.auth.signOut(); }catch(e){ console.error(e); }
+      const btn = $("signOutBtn");
+      if(btn){ btn.disabled = true; btn.textContent = "Signing out…"; }
+
+      try{
+        await sb.auth.signOut({ scope: "global" });
+      }catch(e){
+        console.error(e);
+      }
+
+      if(btn){ btn.disabled = false; }
       await refreshTopBar();
+    }
+
+    function setPillVisible(visible){
+      const pill = $("freePill");
+      if(pill) pill.style.display = visible ? "flex" : "none";
     }
 
     async function refreshTopBar(){
@@ -716,6 +688,7 @@
       if($("cookieDecline")) $("cookieDecline").textContent = t.cookieDecline;
 
       if(!user){
+        setPillVisible(false);
         if($("freeLeft")) $("freeLeft").textContent = "—";
         if($("authBtn")) $("authBtn").style.display = "inline-flex";
         if($("signOutBtn")) $("signOutBtn").style.display = "none";
@@ -727,162 +700,34 @@
 
       await ensureProfile(user);
       const left = await getFreeLeft(user);
-      if($("freeLeft")) $("freeLeft").textContent = (left === null ? "—" : String(left));
+
+      // показываем pill только если осталось > 0
+      if(typeof left === "number" && left > 0){
+        setPillVisible(true);
+        if($("freeLeft")) $("freeLeft").textContent = String(left);
+      }else{
+        setPillVisible(false);
+        if($("freeLeft")) $("freeLeft").textContent = left === null ? "—" : String(left);
+      }
     }
 
-    // -----------------------------
-    // NEW: FREE local Code Check
-    // -----------------------------
-    function detectLangFromFilename(name){
-      const n = (name || "").toLowerCase();
-      if(n.endsWith(".js") || n.endsWith(".ts")) return "javascript";
-      if(n.endsWith(".html") || n.endsWith(".htm")) return "html";
-      if(n.endsWith(".css")) return "css";
-      if(n.endsWith(".py")) return "python";
-      if(n.endsWith(".java")) return "java";
-      if(n.endsWith(".cs")) return "csharp";
-      if(n.endsWith(".sql")) return "sql";
-      return null;
-    }
+    async function handleMagicLinkCode(){
+      // если Supabase прислал ?code=... (PKCE), нужно обменять на session
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
 
-    function countBalance(s, openCh, closeCh){
-      let c = 0;
-      for(const ch of s){
-        if(ch === openCh) c++;
-        else if(ch === closeCh) c--;
-      }
-      return c;
-    }
+      if(!code) return;
 
-    function basicAutoFixPython(code){
-      const lines = code.split("\n");
-      const out = [];
-      for(let line of lines){
-        const trimmed = line.trim();
-        // add ":" to common statements if missing
-        if(/^(def|if|elif|else|for|while|class|try|except|finally)\b/.test(trimmed)){
-          if(!trimmed.endsWith(":")){
-            // don't add if line already ends with ":" or is like "except Exception as e:"
-            line = line + ":";
-          }
-        }
-        // naive print fix: print "x" -> print("x")
-        if(/^\s*print\s+[^(\n]+$/.test(line) && !/^\s*print\s*\(/.test(line)){
-          const m = line.match(/^(\s*)print\s+(.+)$/);
-          if(m) line = `${m[1]}print(${m[2]})`;
-        }
-        out.push(line);
-      }
-      return out.join("\n");
-    }
-
-    function formatIssues(issues){
-      if(!issues.length) return "No issues detected.";
-      return issues.map((x,i)=> `${i+1}. ${x}`).join("\n");
-    }
-
-    function analyzeCode(code, lang){
-      const issues = [];
-      let fixed = "";
-
-      const src = (code || "");
-      if(!src.trim()){
-        return { ok:false, issues:["Paste code first."], fixed:"" };
+      try{
+        const { error } = await sb.auth.exchangeCodeForSession(window.location.href);
+        if(error) console.error("exchangeCodeForSession error:", error);
+      }catch(e){
+        console.error("exchangeCodeForSession exception:", e);
       }
 
-      if(lang === "javascript"){
-        try{
-          // Syntax check
-          new Function(src);
-        }catch(e){
-          issues.push(`Syntax error: ${e && e.message ? e.message : String(e)}`);
-        }
-        // tiny heuristics
-        if(src.includes("console.log(") === false && src.length > 40){
-          issues.push("Hint: no console.log found — if debugging, add logs.");
-        }
-        fixed = src; // no safe auto-fix for JS syntax
-      }
-
-      if(lang === "html"){
-        try{
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(src, "text/html");
-          const pe = doc.querySelector("parsererror");
-          if(pe) issues.push("HTML parse error detected (parsererror). Check unclosed tags / invalid markup.");
-        }catch(e){
-          issues.push(`HTML parser error: ${e && e.message ? e.message : String(e)}`);
-        }
-        // basic balance hints
-        const lt = countBalance(src, "<", ">");
-        if(lt !== 0) issues.push("Looks like some '<' or '>' may be missing.");
-        fixed = src;
-      }
-
-      if(lang === "css"){
-        try{
-          const sheet = new CSSStyleSheet();
-          sheet.replaceSync(src);
-        }catch(e){
-          issues.push(`CSS syntax error: ${e && e.message ? e.message : String(e)}`);
-        }
-        const br = countBalance(src, "{", "}");
-        if(br !== 0) issues.push("Looks like '{' and '}' are unbalanced.");
-        fixed = src;
-      }
-
-      if(lang === "sql"){
-        const br1 = countBalance(src, "(", ")");
-        if(br1 !== 0) issues.push("Parentheses are unbalanced: check '(' and ')'.");
-        if(!/;\s*$/.test(src.trim())) issues.push("Tip: many SQL statements end with ';' (not required everywhere, but common).");
-        fixed = src;
-      }
-
-      if(lang === "python"){
-        const br1 = countBalance(src, "(", ")");
-        const br2 = countBalance(src, "[", "]");
-        const br3 = countBalance(src, "{", "}");
-        if(br1 !== 0) issues.push("Python: parentheses '(' ')' seem unbalanced.");
-        if(br2 !== 0) issues.push("Python: brackets '[' ']' seem unbalanced.");
-        if(br3 !== 0) issues.push("Python: braces '{' '}' seem unbalanced.");
-        // basic colon checks
-        const lines = src.split("\n");
-        lines.forEach((ln, idx)=>{
-          const t = ln.trim();
-          if(/^(def|if|elif|else|for|while|class|try|except|finally)\b/.test(t) && !t.endsWith(":")){
-            issues.push(`Line ${idx+1}: missing ':' at end of statement (basic check).`);
-          }
-        });
-        fixed = basicAutoFixPython(src);
-        if(fixed !== src) issues.push("Auto-fix prepared: added missing ':' in some lines and fixed simple print statements.");
-      }
-
-      if(lang === "java" || lang === "csharp"){
-        const br = countBalance(src, "{", "}");
-        const par = countBalance(src, "(", ")");
-        if(br !== 0) issues.push(`${lang === "java" ? "Java" : "C#"}: '{' and '}' are unbalanced.`);
-        if(par !== 0) issues.push(`${lang === "java" ? "Java" : "C#"}: '(' and ')' are unbalanced.`);
-        if(!src.includes("class ")) issues.push(`${lang === "java" ? "Java" : "C#"}: no 'class' found (is this a full file?).`);
-        fixed = src;
-      }
-
-      const ok = issues.length === 0;
-      return { ok, issues, fixed };
-    }
-
-    function renderCodeReport(res, lang){
-      const title = `Code Check (${lang})`;
-      const status = res.ok ? "✅ Looks OK (basic check)" : "⚠️ Issues found (basic check)";
-      const issuesBlock = `Issues:\n${formatIssues(res.issues || [])}`;
-      let fixedBlock = "";
-
-      if(res.fixed && res.fixed.trim() && res.fixed !== $("codeInput").value){
-        fixedBlock = `\n\nSuggested fixed code (basic auto-fix):\n—\n${res.fixed}`;
-      } else if(res.fixed && res.fixed.trim()){
-        fixedBlock = `\n\nSuggested fixed code:\n—\n${res.fixed}`;
-      }
-
-      return `${title}\n${status}\n\n${issuesBlock}${fixedBlock}`;
+      // убрать code из адреса, чтобы не мешал и не повторялся
+      url.searchParams.delete("code");
+      window.history.replaceState({}, document.title, url.toString());
     }
 
     (function init(){
@@ -910,12 +755,22 @@
       if(pw) pw.addEventListener("click", (e)=> { if(e.target === pw) hidePaywall(); });
 
       // auth
-      on("authBtn","click", openAuth);
-      on("authClose","click", closeAuth);
+      on("authBtn","click", (e)=> { e.preventDefault(); e.stopPropagation(); openAuth(); });
+      on("authClose","click", (e)=> { e.preventDefault(); e.stopPropagation(); closeAuth(); });
       const modal = $("authModal");
       if(modal) modal.addEventListener("click", (e)=> { if(e.target === modal) closeAuth(); });
-      on("emailBtn","click", ()=> sendMagicLink(($("emailInput")?.value || "").trim()));
-      on("signOutBtn","click", signOut);
+
+      on("emailBtn","click", (e)=> {
+        e.preventDefault(); e.stopPropagation();
+        sendMagicLink(($("emailInput")?.value || "").trim());
+      });
+
+      // sign out
+      on("signOutBtn","click", (e)=> {
+        e.preventDefault();
+        e.stopPropagation();
+        signOut();
+      });
 
       // auth state changes
       sb.auth.onAuthStateChange(async (_event, session) => {
@@ -923,9 +778,10 @@
         await refreshTopBar();
       });
 
-      refreshTopBar();
+      // IMPORTANT: обработка PKCE code из magic link
+      handleMagicLinkCode().then(refreshTopBar);
 
-      // Tool buttons (paid/limited)
+      // Tool buttons
       on("hGen","click", async ()=>{ if(!await consumeAttemptOrPaywall()) return; $("hOut").textContent = genHumanize($("hInput").value, $("hTone").value); });
       on("hCopy","click", ()=> copyText($("hOut").textContent || ""));
       on("hSave","click", ()=> saveTxt("virex-humanize.txt", $("hOut").textContent || ""));
@@ -937,30 +793,6 @@
       on("sGen","click", async ()=>{ if(!await consumeAttemptOrPaywall()) return; $("sOut").textContent = genSocial($("sInput").value, $("sPlatform").value); });
       on("sCopy","click", ()=> copyText($("sOut").textContent || ""));
       on("sSave","click", ()=> saveTxt("virex-social-post.txt", $("sOut").textContent || ""));
-
-      // Code Check (FREE, no auth, no limits)
-      on("codeUpload","click", ()=> $("codeFile")?.click());
-      on("codeFile","change", async (e)=>{
-        const file = e.target.files && e.target.files[0];
-        if(!file) return;
-        const text = await file.text();
-        if($("codeInput")) $("codeInput").value = text;
-
-        const detected = detectLangFromFilename(file.name);
-        if(detected && $("codeLang")) $("codeLang").value = detected;
-
-        if($("codeOut")) $("codeOut").textContent = `Loaded: ${file.name}\nSize: ${file.size} bytes\n\nClick "Check" to analyze.`;
-        e.target.value = "";
-      });
-
-      on("codeGen","click", ()=>{
-        const lang = $("codeLang")?.value || "javascript";
-        const code = $("codeInput")?.value || "";
-        const res = analyzeCode(code, lang);
-        $("codeOut").textContent = renderCodeReport(res, lang);
-      });
-      on("codeCopy","click", ()=> copyText($("codeOut").textContent || ""));
-      on("codeSave","click", ()=> saveTxt("virex-code-check.txt", $("codeOut").textContent || ""));
     })();
   </script>
 </body>
